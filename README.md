@@ -28,7 +28,7 @@ Create a .env file in the root directory. Refer to `.env.example` for required k
 * Audit Trail: Detailed logs for all auth events with filtering and pagination.
 
 ## API Documentation
-Once the system is running, access the interactive Swagger UI to explore endpoints, schemas, and example requests: [http://localhost:8000/api/v1/schema/swagger-ui/](http://localhost:8000/api/v1/schema/swagger-ui/) 
+Once the system is running, access the interactive Swagger UI to explore endpoints, schemas, and example requests: [http://localhost:8000/api/v1/docs/](http://localhost:8000/api/v1/docs/) 
 
 ## API Endpoints
 ### Authentication
