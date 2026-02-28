@@ -1,0 +1,84 @@
+services:
+
+  migrate:
+    build: .
+    container_name: one_off_migrate
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    env_file: .env
+    volumes:
+      - ./static:/app/static
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: .
+    container_name: tses_web
+    command: gunicorn core.wsgi:application --bind 0.0.0.0:10000
+    volumes:
+      - ./media:/app/media
+      - ./static:/app/static
+    env_file:
+      - .env
+    ports:
+      - "10000:10000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: tses_db
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: tses_redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"] 
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build: .
+    container_name: tses_celery_worker
+    command: celery -A core worker --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+
