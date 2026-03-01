@@ -13,8 +13,13 @@ env = environ.Env(
     CSRF_TRUSTED_ORIGINS=(list, []),
 
     # OTP
-    OTP_EXPIRATION_TIME=(int, 5),
-    OTP_CODE_LENGTH=(int, 4),
+    OTP_TTL=(int, 300),
+    OTP_MAX_ATTEMPTS=(int, 20),
+    OTP_CODE_LENGTH=(int, 6),
+    OTP_RATE_LIMIT_EMAIL=(int, 3),
+    OTP_RATE_WINDOW_EMAIL=(int, 600),
+    OTP_RATE_LIMIT_IP=(int, 10),
+    OTP_RATE_WINDOW_IP=(int, 3600),
 
     # CORS
     CORS_ORIGIN_ALLOW_ALL=(bool, False),
@@ -25,6 +30,8 @@ env = environ.Env(
     CELERY_BROKER_URL = (str, None),
     CELERY_RESULT_BACKEND_URL = (str, None),
     CACHE_REDIS_URL = (str, None),
+
+    DEFAULT_FROM_EMAIL=(str, 'no-reply@tses.com')
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -46,14 +53,27 @@ CORS_ALLOW_CREDENTIALS = env('CORS_ALLOW_CREDENTIALS')
 CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
-OTP_EXPIRATION_TIME = env('OTP_EXPIRATION_TIME')
+REDIS_URL = env('CACHE_REDIS_URL')
+
+OTP_TTL = env('OTP_TTL')
+OTP_MAX_ATTEMPTS  = env('OTP_MAX_ATTEMPTS')
 OTP_CODE_LENGTH = env('OTP_CODE_LENGTH')
+
+OTP_RATE_LIMIT_EMAIL = env('OTP_RATE_LIMIT_EMAIL')
+OTP_RATE_WINDOW_EMAIL = env('OTP_RATE_WINDOW_EMAIL')
+
+OTP_RATE_LIMIT_IP = env('OTP_RATE_LIMIT_IP')
+OTP_RATE_WINDOW_IP = env('OTP_RATE_WINDOW_IP')
 
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND_URL")
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_TRACK_STARTED = True
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True  # or False
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CANCEL_TASKS_BY_DEFAULT = True
 
 STORAGES = {
@@ -144,6 +164,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ClientInfoMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
