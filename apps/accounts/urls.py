@@ -3,5 +3,5 @@ from . import views
 
 
 urlpatterns = [
-
+    path('otp/request', views.OTPRequestView.as_view(), name='otp-request'),
 ]
