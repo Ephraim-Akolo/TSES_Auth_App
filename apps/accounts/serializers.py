@@ -51,8 +51,8 @@ class OTPVerifyFailedResponseSerializer(serializers.Serializer):
     attempts_left = serializers.IntegerField()
 
 
-class OTPVerifyThrottledResponseSerializer(serializers.Serializer):
-    message = serializers.CharField(default="Too many attempts")
+class OTPVerifyLockedResponseSerializer(serializers.Serializer):
+    message = serializers.CharField(default="Too many failed attempts.")
     retry_after = serializers.IntegerField()
 
 

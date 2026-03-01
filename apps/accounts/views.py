@@ -10,7 +10,7 @@ from .serializers import (
     OTPVerifyRequestSerializer,
     OTPVerifyResponseSerializer,
     OTPVerifyFailedResponseSerializer,
-    OTPVerifyThrottledResponseSerializer,
+    OTPVerifyLockedResponseSerializer,
 )
 from .tasks import send_otp_email
 from audit.tasks import write_audit_log
@@ -21,6 +21,10 @@ from core import logger
 
 
 class OTPRequestView(generics.GenericAPIView):
+    '''
+    Validates the user's email and enqueues an asynchronous task to send a 6-digit OTP code via email. 
+    Implements rate limiting based on Email and IP address.
+    '''
     serializer_class = OTPRequestSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
@@ -70,6 +74,10 @@ class OTPRequestView(generics.GenericAPIView):
         
 
 class OTPVerifyView(generics.CreateAPIView):
+    '''
+    Verifies the provided 6-digit code against the hashed value in Redis. 
+    On success, a user record is created or updated, and JWT tokens are issued.
+    '''
     serializer_class = OTPVerifyRequestSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
@@ -78,7 +86,7 @@ class OTPVerifyView(generics.CreateAPIView):
         responses={
             200: OTPVerifyResponseSerializer,
             400: OTPVerifyFailedResponseSerializer,
-            429: OTPVerifyThrottledResponseSerializer,
+            423: OTPVerifyLockedResponseSerializer,
         }
     )
     def post(self, request, *args, **kwargs):
@@ -120,9 +128,9 @@ class OTPVerifyView(generics.CreateAPIView):
             
             elif result.code in ("429", "423"):
                 logger.error(f"Error verifying OTP: {result}")
-                throttled_serializer = OTPVerifyThrottledResponseSerializer({"retry_after": result.retry_after})
+                throttled_serializer = OTPVerifyLockedResponseSerializer({"retry_after": result.retry_after})
                 write_audit_log.delay(event=AuditLog.EVENT.OTP_LOCKED, **audit_kw)
-                return Response(throttled_serializer.data, status=status.HTTP_429_TOO_MANY_REQUESTS)
+                return Response(throttled_serializer.data, status=status.HTTP_423_LOCKED)
             else:
                 logger.critical(f"New status not yet implemented: {result}")
                 raise NotImplementedError
