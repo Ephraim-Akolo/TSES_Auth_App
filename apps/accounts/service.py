@@ -2,7 +2,7 @@ import redis
 import secrets
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
-from rest_framework.exceptions import ValidationError
+from core.exceptions import RateLimitedException
 
 
 redis_client = redis.from_url(settings.REDIS_URL)
@@ -23,9 +23,15 @@ class OTPService:
         Redis rate limiting using atomic counter.
         """
         count = redis_client.incr(key)
+
         if count == 1:
             redis_client.expire(key, window)
-        return count > limit
+
+        if count > limit:
+            ttl = redis_client.ttl(key)
+            return True, max(ttl, 0)
+
+        return False, 0
     
     @staticmethod
     def _get_email_rate_key(email:str):
@@ -61,11 +67,13 @@ class OTPService:
         email_key = cls._get_email_rate_key(email)
         ip_key = cls._get_ip_rate_key(ip)
 
-        if cls._is_rate_limited(email_key, cls.OTP_RATE_LIMIT_EMAIL, cls.OTP_RATE_WINDOW_EMAIL):
-            raise ValidationError("Too many OTP requests for this email")
-
-        if cls._is_rate_limited(ip_key, cls.OTP_RATE_LIMIT_IP, cls.OTP_RATE_WINDOW_IP):
-            raise ValidationError("Too many OTP requests from this IP")
+        limited, retry = cls._is_rate_limited(email_key, cls.OTP_RATE_LIMIT_EMAIL, cls.OTP_RATE_WINDOW_EMAIL)
+        if limited:
+            raise RateLimitedException(retry, "Too many OTP requests from this email")
+        
+        limited, retry = cls._is_rate_limited(ip_key, cls.OTP_RATE_LIMIT_IP, cls.OTP_RATE_WINDOW_IP)
+        if limited:
+            raise RateLimitedException(retry, "Too many OTP requests from this IP")
 
         otp = cls.generate_otp()
 
@@ -77,8 +85,7 @@ class OTPService:
             make_password(otp)
         )
 
-        # Reset attempt counter
-        redis_client.delete(cls._get_otp_attempts_key(email, purpose))
+        redis_client.delete(cls._get_otp_attempts_key(email, purpose)) # Reset attempt counter
 
         return otp
     
