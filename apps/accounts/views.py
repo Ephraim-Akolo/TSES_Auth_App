@@ -9,6 +9,7 @@ from .serializers import (
 )
 from .tasks import send_otp_email
 from audit.tasks import write_audit_log
+from audit.models import AuditLog
 from .service import OTPService
 from core.exceptions import RateLimitedException
 from core import logger
@@ -38,7 +39,7 @@ class OTPRequestView(generics.GenericAPIView):
             otp = OTPService.create_otp(email, request.client_ip, PURPOSE.LOGIN)
             send_otp_email.delay(email, otp)
             write_audit_log.delay(
-                event="OTP_VERIFIED",
+                event=AuditLog.EVENT.OTP_REQUESTED,
                 email=email,
                 ip=request.client_ip,
                 user_agent=request.user_agent,

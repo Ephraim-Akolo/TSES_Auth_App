@@ -2,8 +2,13 @@ from django.db import models
 from uuid import uuid4
 
 class AuditLog(models.Model):
+    class EVENT(models.TextChoices):
+        OTP_REQUESTED = ('OTP_REQUESTED', 'OTP Requested')
+        OTP_VERIFIED = ('OTP_VERIFIED', 'OTP Verified')
+        OTP_FAILED = ('OTP_FAILED', 'OTP Failed')
+        OTP_LOCKED = ('OTP_LOCKED', 'OTP locked')
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    event = models.CharField(max_length=50)
+    event = models.CharField(max_length=50, choices=EVENT.choices)
     email = models.EmailField()
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
