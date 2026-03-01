@@ -3,6 +3,7 @@ import secrets
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from core.exceptions import RateLimitedException
+from enum import StrEnum
 
 
 redis_client = redis.from_url(settings.REDIS_URL)
@@ -16,6 +17,9 @@ class OTPService:
     OTP_RATE_WINDOW_EMAIL = settings.OTP_RATE_WINDOW_EMAIL
     OTP_RATE_LIMIT_IP = settings.OTP_RATE_LIMIT_IP
     OTP_RATE_WINDOW_IP = settings.OTP_RATE_WINDOW_IP
+
+    class PURPOSE(StrEnum):
+        LOGIN = 'login'
 
     @staticmethod
     def _is_rate_limited(key:str, limit:int, window:int):
@@ -59,7 +63,7 @@ class OTPService:
         return "".join(secrets.choice(digits) for _ in range(code_length))
     
     @classmethod
-    def create_otp(cls, email, ip, purpose="login"):
+    def create_otp(cls, email, ip, purpose:PURPOSE=PURPOSE.LOGIN):
         """
         Creates OTP with Redis TTL and rate limiting.
         """
@@ -90,7 +94,7 @@ class OTPService:
         return otp
     
     @classmethod
-    def verify_otp(cls, email, otp, purpose="login")->tuple[bool, str, int]:
+    def verify_otp(cls, email, otp, purpose:PURPOSE=PURPOSE.LOGIN)->tuple[bool, str, int]:
         """
         Verifies OTP Code with Redis.
         """
