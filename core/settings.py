@@ -47,6 +47,8 @@ CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+REDIS_URL = env('CACHE_REDIS_URL')
+
 OTP_EXPIRATION_TIME = env('OTP_EXPIRATION_TIME')
 OTP_CODE_LENGTH = env('OTP_CODE_LENGTH')
 
@@ -144,6 +146,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ClientInfoMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
