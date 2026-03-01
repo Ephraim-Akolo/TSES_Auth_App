@@ -99,7 +99,7 @@ class OTPVerifyView(generics.CreateAPIView):
                 "meta": {
                     "method": self.request.method,
                     "path": self.request.path,
-                    "body": self.request.data,
+                    "body": {"email": self.request.data.get("email")},
                     "client_ip_is_routable": request.client_ip_is_routable,
                 }
             }
