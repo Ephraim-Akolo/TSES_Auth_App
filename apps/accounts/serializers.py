@@ -21,6 +21,7 @@ class ThrottleErrorSerializer(serializers.Serializer):
 
 class OTPVerifyRequestSerializer(serializers.ModelSerializer):
     otp = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
 
     class Meta:
         model = User
